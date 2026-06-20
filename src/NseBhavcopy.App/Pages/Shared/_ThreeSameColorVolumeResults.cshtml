@@ -1,0 +1,65 @@
+@model ThreeSameColorVolumeScanReport
+@{
+    var universeLabel = ViewData["UniverseLabel"] as string ?? "selected universe";
+}
+
+<div id="scanResults" class="scan-results">
+    <h2>Results — @Model.Matches.Count match(es)</h2>
+    <p class="text-muted">@Model.Message</p>
+    @if (Model.Matches.Count > 0)
+    {
+        <p class="text-muted pattern-summary">
+            @Model.GreenIncreasingCount green increasing ·
+            @Model.GreenDecreasingCount green decreasing ·
+            @Model.RedIncreasingCount red increasing ·
+            @Model.RedDecreasingCount red decreasing
+        </p>
+    }
+
+    @if (Model.Matches.Count == 0)
+    {
+        <div class="alert alert-info">No matches found for @universeLabel on @Model.ScanDate.ToString("dd MMM yyyy").</div>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Pattern</th>
+                    <th title="Volume direction day over day">Trend</th>
+                    <th>Day 1</th>
+                    <th>Vol 1</th>
+                    <th>Day 2</th>
+                    <th>Vol 2</th>
+                    <th>Day 3</th>
+                    <th>Vol 3</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in Model.Matches)
+                {
+                    var badgeClass = m.IsGreen ? "badge-green" : "badge-red";
+                    <tr>
+                        <td><strong>@m.Symbol</strong></td>
+                        <td><span class="color-badge @badgeClass">@m.PatternLabel</span></td>
+                        <td>
+                            <span class="trend-cell" title="@m.PatternLabel — @m.VolumeTrendTitle">
+                                <span class="candle-arrow @(m.IsGreen ? "trend-up" : "trend-down")" aria-hidden="true">@m.CandleTrendArrow</span>
+                                <span class="trend-arrows @(m.IsVolumeIncreasing ? "trend-up" : "trend-down")" aria-label="@m.VolumeTrendTitle">
+                                    @m.VolumeTrendArrows
+                                </span>
+                            </span>
+                        </td>
+                        @for (var i = 0; i < 3; i++)
+                        {
+                            var bar = m.Bars[i];
+                            <td>@bar.Date.ToString("dd MMM") (@bar.Close.ToString("N2"))</td>
+                            <td>@bar.Volume.ToString("N0")</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

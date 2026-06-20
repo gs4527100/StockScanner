@@ -1,0 +1,159 @@
+@page
+@model NextDayBiasModel
+@{
+    ViewData["Title"] = "Next Day Bias";
+    var isThreeSameColor = Model.ParsedScanner == BhavcopyScannerKind.ThreeSameColorVolume;
+    var isFiveDay = Model.ParsedScanner == BhavcopyScannerKind.FiveDayUnusualVolume;
+    var isWeekly = Model.ParsedScanner == BhavcopyScannerKind.WeeklyVolumeExpansion;
+}
+
+<h1>Next Day Bias Backtest</h1>
+<p class="lead">
+    Pick <strong>one scanner</strong> (and one 3 Same-Color pattern when applicable), then test whether the next trading day
+    moved in that scanner's expected direction. Win = next-day close vs scan-day close in the bias direction.
+</p>
+
+<form method="post" class="scan-form">
+    <div class="universe-bar">
+        <label for="universe">Stock universe</label>
+        <select asp-for="Universe" id="universe" class="form-control">
+            @foreach (var u in Model.UniverseOptions)
+            {
+                var count = Model.UniverseCounts.GetValueOrDefault(u.Id);
+                <option value="@u.Id">@u.Name (@count stocks)</option>
+            }
+        </select>
+    </div>
+    <div class="form-row">
+        <label asp-for="FromDate">From date</label>
+        <input asp-for="FromDate" type="date" class="form-control" />
+    </div>
+    <div class="form-row">
+        <label asp-for="ToDate">To date</label>
+        <input asp-for="ToDate" type="date" class="form-control" />
+        <small class="text-muted">Must be before the latest bhavcopy date (needs next-day data).</small>
+    </div>
+    <div class="form-row">
+        <label asp-for="Scanner">Scanner</label>
+        <select asp-for="Scanner" class="form-control" asp-items="@(new SelectList(BhavcopyScannerKinds.All, nameof(BhavcopyScannerKindOption.Id), nameof(BhavcopyScannerKindOption.Label)))"></select>
+    </div>
+    <div class="form-row" style="@(isThreeSameColor ? "" : "display:none")">
+        <label asp-for="Pattern">3 Same-Color pattern</label>
+        <select asp-for="Pattern" class="form-control" asp-items="Html.GetEnumSelectList<SameColorVolumePattern>()"></select>
+        <small class="text-muted">One pattern per backtest run.</small>
+    </div>
+    <div class="form-row" style="@(isFiveDay ? "" : "display:none")">
+        <label asp-for="WindowDays">5D unusual — window days</label>
+        <input asp-for="WindowDays" type="number" min="1" max="10" class="form-control" />
+    </div>
+    <div class="form-row" style="@(isFiveDay ? "" : "display:none")">
+        <label asp-for="BaselineLookbackDays">5D unusual — baseline lookback</label>
+        <input asp-for="BaselineLookbackDays" type="number" min="5" max="60" class="form-control" />
+    </div>
+    <div class="form-row" style="@(isFiveDay ? "" : "display:none")">
+        <label asp-for="MinVolumeMultiplier">5D unusual — min volume multiplier</label>
+        <input asp-for="MinVolumeMultiplier" type="number" step="0.1" min="1" class="form-control" />
+    </div>
+    <div class="form-row" style="@(isWeekly ? "" : "display:none")">
+        <label asp-for="MinVolumeExpansionPercent">Weekly vol — min expansion %</label>
+        <input asp-for="MinVolumeExpansionPercent" type="number" step="0.1" min="0" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Run backtest</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-warning">@Model.ErrorMessage</div>
+}
+
+@if (Model.Report is not null)
+{
+    <div id="backtestResults" class="scan-results">
+        <h2>Results — @Model.Report.SelectedScannerLabel</h2>
+        <p class="text-muted">@Model.Report.Message</p>
+
+        @if (Model.Report.Summary is not null)
+        {
+            var summary = Model.Report.Summary;
+            <div class="stats-grid" style="margin-bottom:1.5rem;">
+                <div class="stat-card">
+                    <span class="stat-label">Signals</span>
+                    <span class="stat-value">@summary.TotalSignals</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Win rate</span>
+                    <span class="stat-value">@summary.WinRatePercent.ToString("0.0")%</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Wins / Losses / Flat</span>
+                    <span class="stat-value stat-small">@summary.Wins / @summary.Losses / @summary.Flats</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Avg move (bias dir)</span>
+                    <span class="stat-value stat-small">@summary.AverageNextDayMovePercent.ToString("+0.00;-0.00;0.00")%</span>
+                </div>
+            </div>
+            <p class="text-muted"><strong>Bias rule:</strong> @summary.BiasRule</p>
+        }
+
+        @if (Model.Report.Signals.Count > 0)
+        {
+            <h3>Signal details (@Model.Report.Signals.Count)</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Scan date</th>
+                        <th>Bias</th>
+                        <th>Scan close</th>
+                        <th>Next date</th>
+                        <th>Next close</th>
+                        <th>Next-day %</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var signal in Model.Report.Signals)
+                    {
+                        var resultClass = signal.Outcome switch
+                        {
+                            BiasOutcome.Win => "text-success",
+                            BiasOutcome.Loss => "text-danger",
+                            _ => ""
+                        };
+                        var resultLabel = signal.Outcome switch
+                        {
+                            BiasOutcome.Win => "Worked",
+                            BiasOutcome.Loss => "Failed",
+                            _ => "Flat"
+                        };
+                        <tr>
+                            <td><strong>@signal.Symbol</strong></td>
+                            <td>@signal.ScanDate.ToString("dd MMM yyyy")</td>
+                            <td>@signal.ExpectedBias</td>
+                            <td>@signal.ScanDayClose.ToString("N2")</td>
+                            <td>@signal.NextTradingDate.ToString("dd MMM yyyy")</td>
+                            <td>@signal.NextDayClose.ToString("N2")</td>
+                            <td class="@(signal.NextDayChangePercent >= 0 ? "text-success" : "text-danger")">
+                                @signal.NextDayChangePercent.ToString("+0.00;-0.00;0.00")%
+                            </td>
+                            <td class="@resultClass"><strong>@resultLabel</strong></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="alert alert-info">No signals matched for this scanner in the date range.</div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        if (document.getElementById('backtestResults')) {
+            document.getElementById('backtestResults').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+}

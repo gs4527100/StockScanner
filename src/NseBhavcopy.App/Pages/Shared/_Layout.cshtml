@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NSE Bhavcopy Scanner</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="app-header">
+        <nav class="navbar navbar-expand-md">
+            <div class="container">
+                <a class="navbar-brand" asp-page="/Index">NSE Bhavcopy Scanner</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="nav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" asp-page="/Index">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-page="/Download">Download</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-page="/ThreeSameColorVolume">3 Same-Color</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-page="/FiveDayUnusualVolume">Unusual Vol</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-page="/WeeklyVolumeExpansion">Weekly Vol</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-page="/NextDayBias">Next Day Bias</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container app-main">
+        @RenderBody()
+    </main>
+
+    <footer class="app-footer">
+        <div class="container text-muted small">
+            Daily EOD data from NSE bhavcopy — stored locally in SQLite.
+        </div>
+    </footer>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,73 @@
+@page
+@model DownloadModel
+@{
+    ViewData["Title"] = "Download Bhavcopy";
+}
+
+<h1>Download Bhavcopy</h1>
+<p class="lead">Fetch NSE end-of-day bhavcopy files and store them locally. Weekends and already-cached dates are skipped.</p>
+
+<div class="stats-grid stats-grid-compact">
+    <div class="stat-card">
+        <span class="stat-label">Stored symbols</span>
+        <span class="stat-value">@Model.Stats.SymbolCount</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Date range</span>
+        <span class="stat-value stat-small">
+            @if (Model.Stats.MinDate.HasValue)
+            {
+                @($"{Model.Stats.MinDate:dd MMM yyyy} – {Model.Stats.MaxDate:dd MMM yyyy}")
+            }
+            else
+            {
+                <text>—</text>
+            }
+        </span>
+    </div>
+</div>
+
+<form method="post" asp-page-handler="Download" class="scan-form">
+    <div class="form-row">
+        <label asp-for="FromDate">From date</label>
+        <input asp-for="FromDate" type="date" class="form-control" />
+    </div>
+    <div class="form-row">
+        <label asp-for="ToDate">To date</label>
+        <input asp-for="ToDate" type="date" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Download range</button>
+</form>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-success">@Model.StatusMessage</div>
+}
+
+@if (Model.Report is not null)
+{
+    <h2>Download log</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Rows</th>
+                <th>Format</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.Report.Results.OrderByDescending(x => x.Date))
+            {
+                <tr>
+                    <td>@r.Date.ToString("dd MMM yyyy")</td>
+                    <td>@(r.Success ? "OK" : "Failed")</td>
+                    <td>@(r.RowCount > 0 ? r.RowCount.ToString("N0") : "—")</td>
+                    <td>@(r.Format ?? "—")</td>
+                    <td>@(r.Error ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,151 @@
+@page
+@model WeeklyVolumeExpansionModel
+@{
+    ViewData["Title"] = "Weekly Volume Expansion";
+}
+
+<h1>Weekly Volume Expansion Scanner</h1>
+<p class="lead">
+    Detects stocks where the latest completed week's volume is greater than the previous week's volume.
+    Weekly OHLCV is built from daily bhavcopy (Monday–Friday calendar weeks).
+</p>
+
+<form method="post" class="scan-form scan-form-wide">
+    <div class="universe-bar">
+        <label for="universe">Stock universe</label>
+        <select asp-for="Universe" id="universe" class="form-control">
+            @foreach (var u in Model.UniverseOptions)
+            {
+                var count = Model.UniverseCounts.GetValueOrDefault(u.Id);
+                <option value="@u.Id">@u.Name (@count stocks)</option>
+            }
+        </select>
+    </div>
+
+    <div class="filter-grid">
+        <div class="form-row">
+            <label asp-for="ScanDate">Scan date</label>
+            <input asp-for="ScanDate" type="date" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MinVolumeExpansionPercent">Min volume expansion %</label>
+            <input asp-for="MinVolumeExpansionPercent" type="number" step="0.1" min="0" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="SortBy">Sort by</label>
+            <select asp-for="SortBy" class="form-control" asp-items="Html.GetEnumSelectList<WeeklyVolumeExpansionSortBy>()"></select>
+        </div>
+        <div class="form-row">
+            <label asp-for="PreviousWeekColorFilter">Previous week color</label>
+            <select asp-for="PreviousWeekColorFilter" class="form-control" asp-items="Html.GetEnumSelectList<CandleColorFilter>()"></select>
+        </div>
+        <div class="form-row">
+            <label asp-for="CurrentWeekColorFilter">Current week color</label>
+            <select asp-for="CurrentWeekColorFilter" class="form-control" asp-items="Html.GetEnumSelectList<CandleColorFilter>()"></select>
+        </div>
+        <div class="form-row">
+            <label asp-for="MinBodyPercent">Min body %</label>
+            <input asp-for="MinBodyPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MaxBodyPercent">Max body %</label>
+            <input asp-for="MaxBodyPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MinUpperWickPercent">Min upper wick %</label>
+            <input asp-for="MinUpperWickPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MaxUpperWickPercent">Max upper wick %</label>
+            <input asp-for="MaxUpperWickPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MinLowerWickPercent">Min lower wick %</label>
+            <input asp-for="MinLowerWickPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+        <div class="form-row">
+            <label asp-for="MaxLowerWickPercent">Max lower wick %</label>
+            <input asp-for="MaxLowerWickPercent" type="number" step="0.1" min="0" max="100" class="form-control" />
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" asp-page-handler="Scan" class="btn btn-primary">Run scan</button>
+        <button type="submit" asp-page-handler="Export" class="btn btn-outline-secondary">Export CSV</button>
+    </div>
+</form>
+
+@if (Model.Report is not null)
+{
+    @if (Model.Report.ValidationErrors.Count > 0)
+    {
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach (var error in Model.Report.ValidationErrors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div id="scanResults" class="scan-results">
+        <h2>Results — @Model.Report.Matches.Count match(es)</h2>
+        <p class="text-muted">@Model.Report.Message</p>
+
+        @if (Model.Report.Matches.Count == 0 && Model.Report.ValidationErrors.Count == 0)
+        {
+            <div class="alert alert-info">No matches found.</div>
+        }
+        else if (Model.Report.Matches.Count > 0)
+        {
+            <div class="table-scroll">
+                <table class="data-table data-table-compact">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Prev Vol</th>
+                            <th>Prev Color</th>
+                            <th>Curr Vol</th>
+                            <th>Curr Color</th>
+                            <th>Vol Exp %</th>
+                            <th>Body %</th>
+                            <th>Upper %</th>
+                            <th>Lower %</th>
+                            <th>Scan Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model.Report.Matches)
+                        {
+                            var prevBadge = m.PreviousWeekColor == WeeklyCandleColor.Green ? "badge-green" : m.PreviousWeekColor == WeeklyCandleColor.Red ? "badge-red" : "badge-doji";
+                            var currBadge = m.CurrentWeekColor == WeeklyCandleColor.Green ? "badge-green" : m.CurrentWeekColor == WeeklyCandleColor.Red ? "badge-red" : "badge-doji";
+                            <tr>
+                                <td><strong>@m.Symbol</strong></td>
+                                <td>@(string.IsNullOrWhiteSpace(m.CompanyName) ? "—" : m.CompanyName)</td>
+                                <td>@m.PreviousWeekVolume.ToString("N0")</td>
+                                <td><span class="color-badge @prevBadge">@m.PreviousWeekColorLabel</span></td>
+                                <td>@m.CurrentWeekVolume.ToString("N0")</td>
+                                <td><span class="color-badge @currBadge">@m.CurrentWeekColorLabel</span></td>
+                                <td>@m.VolumeExpansionPercent.ToString("0.##")</td>
+                                <td>@m.BodyPercent.ToString("0.##")</td>
+                                <td>@m.UpperWickPercent.ToString("0.##")</td>
+                                <td>@m.LowerWickPercent.ToString("0.##")</td>
+                                <td>@m.ScanDate.ToString("dd MMM yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        if (document.getElementById('scanResults')) {
+            document.getElementById('scanResults').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+}

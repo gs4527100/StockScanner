@@ -1,0 +1,90 @@
+@page
+@model FiveDayUnusualVolumeModel
+@{
+    ViewData["Title"] = "5-Day Unusual Volume";
+}
+
+<h1>5-Day Unusual Volume</h1>
+<p class="lead">Stocks with at least one day of unusually high volume vs prior trading-day average.</p>
+
+<form method="post" class="scan-form">
+    <div class="universe-bar">
+        <label for="universe">Stock universe</label>
+        <select asp-for="Universe" id="universe" class="form-control">
+            @foreach (var u in Model.UniverseOptions)
+            {
+                var count = Model.UniverseCounts.GetValueOrDefault(u.Id);
+                <option value="@u.Id">@u.Name (@count stocks)</option>
+            }
+        </select>
+    </div>
+    <div class="form-row">
+        <label asp-for="ScanDate">Scan date</label>
+        <input asp-for="ScanDate" type="date" class="form-control" />
+    </div>
+    <div class="form-row">
+        <label asp-for="WindowDays">Window days</label>
+        <input asp-for="WindowDays" type="number" min="1" max="10" class="form-control" />
+    </div>
+    <div class="form-row">
+        <label asp-for="BaselineLookbackDays">Baseline lookback</label>
+        <input asp-for="BaselineLookbackDays" type="number" min="5" max="60" class="form-control" />
+    </div>
+    <div class="form-row">
+        <label asp-for="MinVolumeMultiplier">Min volume multiplier</label>
+        <input asp-for="MinVolumeMultiplier" type="number" step="0.1" min="1" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Run scan</button>
+</form>
+
+@if (Model.Report is not null)
+{
+    <div id="scanResults" class="scan-results">
+        <h2>Results — @Model.Report.Matches.Count match(es)</h2>
+        <p class="text-muted">@Model.Report.Message</p>
+
+        @if (Model.Report.Matches.Count == 0)
+        {
+            <div class="alert alert-info">No matches found.</div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Avg volume</th>
+                        <th>Baseline days</th>
+                        <th>Unusual days</th>
+                        <th>Peak ratio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.Report.Matches)
+                    {
+                        <tr>
+                            <td><strong>@m.Symbol</strong></td>
+                            <td>@m.AverageVolume.ToString("N0")</td>
+                            <td>@m.BaselineSampleDays</td>
+                            <td>
+                                @foreach (var d in m.UnusualDays)
+                                {
+                                    <div>@d.Date.ToString("dd MMM"): @d.Volume.ToString("N0") (@d.VolumeRatio.ToString("0.##")x)</div>
+                                }
+                            </td>
+                            <td>@m.PeakVolumeRatio.ToString("0.##")x</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        if (document.getElementById('scanResults')) {
+            document.getElementById('scanResults').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+}

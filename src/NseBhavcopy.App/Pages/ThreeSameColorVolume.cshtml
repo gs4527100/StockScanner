@@ -1,0 +1,52 @@
+@page
+@model ThreeSameColorVolumeModel
+@{
+    ViewData["Title"] = "3 Same-Color Volume";
+    var universe = StockUniverses.Parse(Model.Universe);
+}
+
+<h1>3 Same-Color Volume</h1>
+<p class="lead">
+    One scan for all four patterns: 3 green/red days with strictly increasing or decreasing volume.
+</p>
+
+<form method="post" class="scan-form">
+    <div class="universe-bar">
+        <label for="universe">Stock universe</label>
+        <select asp-for="Universe" id="universe" class="form-control">
+            @foreach (var u in Model.UniverseOptions)
+            {
+                var count = Model.UniverseCounts.GetValueOrDefault(u.Id);
+                <option value="@u.Id">@u.Name (@count stocks)</option>
+            }
+        </select>
+    </div>
+    <div class="form-row">
+        <label asp-for="VolumeTrendFilter">Volume trend</label>
+        <select asp-for="VolumeTrendFilter" class="form-control">
+            @foreach (var option in VolumeTrendFilters.Options)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </select>
+    </div>
+    <div class="form-row">
+        <label asp-for="ScanDate">Scan date</label>
+        <input asp-for="ScanDate" type="date" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Run scan</button>
+</form>
+
+@if (Model.Report is not null)
+{
+    ViewData["UniverseLabel"] = StockUniverses.GetLabel(universe);
+    <partial name="Shared/_ThreeSameColorVolumeResults" model="Model.Report" />
+}
+
+@section Scripts {
+    <script>
+        if (document.getElementById('scanResults')) {
+            document.getElementById('scanResults').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+}

@@ -1,0 +1,85 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="hero">
+    <h1>NSE Bhavcopy Scanner</h1>
+    <p class="lead">Daily stock scanners powered by NSE EOD bhavcopy — no live API during scans.</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-label">Symbols (EQ)</span>
+        <span class="stat-value">@Model.Stats.SymbolCount</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Daily bars</span>
+        <span class="stat-value">@Model.Stats.TotalBars.ToString("N0")</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Date range</span>
+        <span class="stat-value stat-small">
+            @if (Model.Stats.MinDate.HasValue && Model.Stats.MaxDate.HasValue)
+            {
+                @($"{Model.Stats.MinDate:dd MMM yyyy} – {Model.Stats.MaxDate:dd MMM yyyy}")
+            }
+            else
+            {
+                <text>No data yet</text>
+            }
+        </span>
+    </div>
+</div>
+
+@if (Model.Stats.TotalBars == 0)
+{
+    <div class="alert alert-warning">
+        No bhavcopy data loaded. <a asp-page="/Download">Download bhavcopy</a> first, then run a scanner.
+    </div>
+}
+
+<div class="card-grid">
+    <a class="nav-card" asp-page="/Download">
+        <h3>Download Bhavcopy</h3>
+        <p>Fetch NSE EOD data for a date or range and store locally in SQLite.</p>
+    </a>
+    <a class="nav-card" asp-page="/ThreeSameColorVolume">
+        <h3>3 Same-Color Volume</h3>
+        <p>Green/red × increasing/decreasing — all four patterns in one scan.</p>
+    </a>
+    <a class="nav-card" asp-page="/FiveDayUnusualVolume">
+        <h3>5-Day Unusual Volume</h3>
+        <p>High volume vs prior trading-day average.</p>
+    </a>
+    <a class="nav-card" asp-page="/WeeklyVolumeExpansion">
+        <h3>Weekly Volume Expansion</h3>
+        <p>Current completed week volume greater than previous week.</p>
+    </a>
+    <a class="nav-card" asp-page="/NextDayBias">
+        <h3>Next Day Bias</h3>
+        <p>Backtest win rate — did the next trading day move in the scanner's expected direction?</p>
+    </a>
+</div>
+
+<h2 class="section-title">Stock universes</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Universe</th>
+            <th>Group</th>
+            <th>Symbols</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model.Universes)
+        {
+            <tr>
+                <td>@u.Name</td>
+                <td>@u.CategoryGroup</td>
+                <td>@(u.Universe == StockUniverse.AllEquity ? Model.Stats.SymbolCount : u.SymbolCount)</td>
+            </tr>
+        }
+    </tbody>
+</table>
