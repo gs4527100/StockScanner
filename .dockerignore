@@ -1,0 +1,15 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/publish
+**/*.user
+**/*.suo
+**/Thumbs.db
+**/.DS_Store
+
+# Source maps — not needed at runtime (smaller context + image)
+**/*.map
+
+# Common editor / OS junk
+**/New Text Document.txt
